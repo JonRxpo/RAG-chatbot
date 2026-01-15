@@ -27,8 +27,15 @@ class RAGSystem:
         self.top_k = top_k
         print(f"RAG System initialized (retrieving top {top_k} chunks)")
     
-    def retrieve_context(self, query):
-        results = self.vectorstore.similarity_search_with_score(query, k=self.top_k)
+    def retrieve_context(self, query, filter_dict=None):
+        if filter_dict:
+            results = self.vectorstore.similarity_search_with_score(
+                query, 
+                k=self.top_k,
+                filter=filter_dict
+            )
+        else:
+            results = self.vectorstore.similarity_search_with_score(query, k=self.top_k)
         
         context_parts = []
         sources = []
@@ -90,28 +97,31 @@ Please provide your answer with proper citations:"""
         except Exception as e:
             return f"Error generating answer: {str(e)}"
     
-    def answer_question(self, query):
-        print(f"\n{'='*60}")
-        print(f"Question: {query}")
-        print(f"{'='*60}\n")
+    def answer_question(self, query, filter_dict=None, verbose=False):
+        if verbose:
+            print(f"\n{'='*60}")
+            print(f"Question: {query}")
+            print(f"{'='*60}\n")
+            print("Retrieving relevant information...")
         
-        print("Retrieving relevant information...")
-        context, sources = self.retrieve_context(query)
-        print(f"Found {len(sources)} relevant chunks\n")
+        context, sources = self.retrieve_context(query, filter_dict)
         
-        print("Generating answer with Claude...")
+        if verbose:
+            print(f"Found {len(sources)} relevant chunks\n")
+            print("Generating answer with Claude...")
+        
         answer = self.generate_answer(query, context, sources)
         
-        print(f"\n{'='*60}")
-        print("ANSWER:")
-        print(f"{'='*60}")
-        print(answer)
-        
-        print(f"\n{'='*60}")
-        print("SOURCES:")
-        print(f"{'='*60}")
-        for source in sources:
-            print(f"  [{source['source_num']}] {source['document']} - {source['page_reference']} (Chunk {source['chunk_id']})")
+        if verbose:
+            print(f"\n{'='*60}")
+            print("ANSWER:")
+            print(f"{'='*60}")
+            print(answer)
+            print(f"\n{'='*60}")
+            print("SOURCES:")
+            print(f"{'='*60}")
+            for source in sources:
+                print(f"  [{source['source_num']}] {source['document']} - {source['page_reference']} (Chunk {source['chunk_id']})")
         
         return {
             'question': query,
@@ -135,7 +145,7 @@ def main():
     print("="*60)
     
     for question in test_questions:
-        result = rag.answer_question(question)
+        result = rag.answer_question(question, verbose=True)
         print("\n" + "="*60 + "\n")
         input("Press Enter to continue to next question...")
     
